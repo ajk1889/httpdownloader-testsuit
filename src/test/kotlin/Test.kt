@@ -1,7 +1,9 @@
 fun main() {
-//    val op = FileOutputStream("/Users/ajk/Desktop/abc.txt")
-//    val ip = Generator(0, 1024 * 1024 * 50)
-    print("'" + Generator[0L to 0L] + "'")
+    val server = Server()
+    server.start()
+    while (readLine() != "s")
+        continue
+    server.stop()
 }
 
 fun print2(vararg items: Any) {

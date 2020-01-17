@@ -3,7 +3,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 class Generator(
-    offset: Long = 0,
+    private val offset: Long = 0,
     private val limit: Long = Long.MAX_VALUE
 ) : InputStream() {
     companion object {
@@ -92,5 +92,14 @@ class Generator(
         gen.toByteArray().copyInto(b, off)
         seek += gen.length
         return gen.length
+    }
+
+    override fun reset() {
+        seek = offset
+    }
+
+    override fun skip(n: Long): Long {
+        seek += n
+        return seek
     }
 }
