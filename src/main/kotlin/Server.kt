@@ -47,10 +47,10 @@ class Server(
 
     private suspend fun generateResponse(headers: Map<String, String>): InputStream = withContext(Dispatchers.Default) {
         if (headers.isEmpty())
-            return@withContext toInputStream("No file specified")
+            return@withContext toInputStream("No file specified", 502)
         if (headers["path"] == path)
             return@withContext toInputStream(stream = Generator(0, size))
-        return@withContext toInputStream("File not found")
+        return@withContext toInputStream("File not found", 404)
     }
 
     private suspend fun String.extractHeaders(): Map<String, String> = withContext(Dispatchers.Default) {
@@ -97,26 +97,34 @@ class Server(
         op.close()
     }
 
+    private fun toInputStream(content: String, responseCode: Int): InputStream {
+        val builder = StringBuilder("HTTP/1.1 $responseCode ${errorCodes[responseCode]}\r\n")
+        builder.append("Content-Type: text/html\r\n")
+        builder.append("Connection: keep-alive\r\n")
+        builder.append("Accept-Ranges: bytes\r\n")
+        builder.append("Content-Length: ${content.length}\r\n")
+        builder.append("\r\n")
+        builder.append(content)
+        return builder.toString().byteInputStream()
+    }
+
     private fun toInputStream(
-        content: String? = null,
-        stream: Generator? = null,
+        stream: Generator,
         responseCode: Int = 200,
         contentDisposition: String = "attachment; filename=\"a.txt\"",
         contentLength: Long = -1,
         contentRange: Triple<Long, Long, Long>? = null,
         contentType: String = "text/html"
     ): InputStream {
-        val builder = StringBuilder("HTTP/1.1 $responseCode OK\r\nServer: TestSuit\r\n")
+        val builder = StringBuilder("HTTP/1.1 $responseCode ${errorCodes[responseCode]}\r\n")
+        builder.append("Server: TestSuit\r\n")
         builder.append("Content-Type: $contentType\r\n")
         builder.append("Connection: keep-alive\r\n")
         builder.append("Accept-Ranges: bytes\r\n")
+        builder.append("Content-Disposition: $contentDisposition\r\n")
 
-        if (content == null && stream != null)
-            builder.append("Content-Disposition: $contentDisposition\r\n")
-
-        val length = if (contentLength != -1L) contentLength
-        else content?.length ?: (stream?.length ?: -1)
-        if (length != -1) builder.append("Content-Length: $length\r\n")
+        val length = if (contentLength == -1L) stream.length else contentLength
+        builder.append("Content-Length: $length\r\n")
 
         if (contentRange != null) {
             val (offset, limit, total) = contentRange
@@ -124,8 +132,27 @@ class Server(
         }
 
         builder.append("\r\n")
-        if (content != null) builder.append(content)
-        if (stream != null) return builder.toString().byteInputStream() + stream
-        return builder.toString().byteInputStream()
+        return builder.toString().byteInputStream() + stream
     }
+
+    private val errorCodes = mapOf(
+        100 to "Continue", 101 to "Switching Protocols",
+        200 to "OK", 201 to "Created", 202 to "Accepted", 203 to "Non-Authoritative Information",
+        204 to "No Content", 205 to "Reset Content", 206 to "Partial Content", 300 to "Multiple Choices",
+        301 to "Moved Permanently", 302 to "Found", 303 to "See Other", 304 to "Not Modified",
+        305 to "Use Proxy", 307 to "Temporary Redirect", 400 to "Bad Request", 401 to "Unauthorized",
+        402 to "Payment Required", 403 to "Forbidden", 404 to "Not Found", 405 to "Method Not Allowed",
+        406 to "Not Acceptable", 407 to "Proxy Authentication Required", 408 to "Request Timeout",
+        409 to "Conflict", 410 to "Gone", 411 to "Length Required", 412 to "Precondition Failed",
+        413 to "Payload Too Large", 414 to "URI Too Long", 415 to "Unsupported Media Type",
+        416 to "Range Not Satisfiable", 417 to "Expectation Failed", 418 to "I'm a teapot",
+        426 to "Upgrade Required", 500 to "Internal Server Error", 501 to "Not Implemented",
+        502 to "Bad Gateway", 503 to "Service Unavailable", 504 to "Gateway Time-out",
+        505 to "HTTP Version Not Supported", 102 to "Processing", 207 to "Multi-Status",
+        226 to "IM Used", 308 to "Permanent Redirect", 422 to "Unprocessable Entity", 423 to "Locked",
+        424 to "Failed Dependency", 428 to "Precondition Required", 429 to "Too Many Requests",
+        431 to "Request Header Fields Too Large", 451 to "Unavailable For Legal Reasons",
+        506 to "Variant Also Negotiates", 507 to "Insufficient Storage",
+        511 to "Network Authentication Required"
+    )
 }
