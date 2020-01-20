@@ -1,4 +1,6 @@
 import kotlinx.coroutines.*
+import java.io.File
+import java.io.FileInputStream
 import java.io.InputStream
 import java.net.ServerSocket
 import java.net.Socket
@@ -6,8 +8,10 @@ import java.net.SocketTimeoutException
 
 class Server(
     private val port: Int = 1234,
-    private val path: String = "/a.txt",
-    private val size: Long = 100 * 1024 * 1024
+    private var path123: String = "/a.txt",
+    private var htdocs: File? = null,
+    private var cookies: String? = null,
+    private var size: Long = 100 * 1024 * 1024
 ) {
     private val server: ServerSocket by lazy { ServerSocket(port) }
     private val ioScope = CoroutineScope(Dispatchers.IO)
@@ -46,10 +50,16 @@ class Server(
     }
 
     private suspend fun generateResponse(headers: Map<String, String>): InputStream = withContext(Dispatchers.Default) {
-        if (headers.isEmpty())
+        val path = headers["path"]
+        if (headers.isEmpty() || path==null) {
             return@withContext toInputStream("No file specified", 502)
-        if (headers["path"] == path)
+        } else if (headers["path"] == path123) {
             return@withContext toInputStream(stream = Generator(0, size))
+        } else {
+            val file = File(htdocs, path)
+            println("Requested file: "+file.absolutePath)
+            if(file.exists()) return@withContext toInputStream(file)
+        }
         return@withContext toInputStream("File not found", 404)
     }
 
@@ -103,9 +113,35 @@ class Server(
         builder.append("Connection: keep-alive\r\n")
         builder.append("Accept-Ranges: bytes\r\n")
         builder.append("Content-Length: ${content.length}\r\n")
+        cookies?.also { builder.append("Set-Cookie: $it") }
         builder.append("\r\n")
         builder.append(content)
         return builder.toString().byteInputStream()
+    }
+
+    private fun toInputStream(
+        file: File,
+        contentRange: Pair<Long, Long>? = null
+    ): InputStream{
+        val builder = StringBuilder("HTTP/1.1 200 OK\r\n")
+        builder.append("Server: TestSuit\r\n")
+        builder.append("Content-Type: application/octet-stream\r\n")
+        builder.append("Connection: keep-alive\r\n")
+        builder.append("Accept-Ranges: bytes\r\n")
+        builder.append("Content-Disposition: attachment; filename=\"${file.name}\"\r\n")
+        cookies?.also { builder.append("Set-Cookie: $it") }
+
+        var inputStream: InputStream = FileInputStream(file)
+        if (contentRange != null) {
+            val (offset, limit) = contentRange
+            inputStream.skip(offset)
+            inputStream = inputStream.setLimit(limit+1)
+            builder.append("Content-Length: ${limit - offset + 1}\r\n")
+            builder.append("Content-Range: bytes $offset-$limit/${file.length()}\r\n")
+        } else builder.append("Content-Length: ${file.length()}\r\n")
+
+        builder.append("\r\n")
+        return builder.toString().byteInputStream() + inputStream
     }
 
     private fun toInputStream(
@@ -122,6 +158,8 @@ class Server(
         builder.append("Connection: keep-alive\r\n")
         builder.append("Accept-Ranges: bytes\r\n")
         builder.append("Content-Disposition: $contentDisposition\r\n")
+
+        cookies?.also { builder.append("Set-Cookie: $it") }
 
         val length = if (contentLength == -1L) stream.length else contentLength
         builder.append("Content-Length: $length\r\n")
