@@ -7,25 +7,19 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 
 class Server(
-    private val port: Int = 1234,
-    private var path123: String = "/a.txt",
-    private var htdocs: File? = null,
-    private var cookies: String? = null,
-    private var size: Long = 100 * 1024 * 1024
+    private val port: Int = 1234
 ) {
+    var path123: String = "/a.txt"
+    var htdocs: File? = null
+    var cookies: String? = null
+    var size123: Long = 100 * 1024 * 1024
+
     private val server: ServerSocket by lazy { ServerSocket(port) }
     private val ioScope = CoroutineScope(Dispatchers.IO)
     private var shouldStop = false
     fun start() {
         ioScope.launch {
-            try {
-                println("Server started")
-                while (!shouldStop)
-                    serve(nextConnection())
-                println("Server stopped")
-            } catch (e: CancellationException) {
-                println("Cancelled: Server stopped")
-            }
+            while (!shouldStop) serve(nextConnection())
         }
     }
 
@@ -54,7 +48,8 @@ class Server(
         if (headers.isEmpty() || path==null) {
             return@withContext toInputStream("No file specified", 502)
         } else if (headers["path"] == path123) {
-            return@withContext toInputStream(stream = Generator(0, size))
+            println("Requested 123 file; size = $size123")
+            return@withContext toInputStream(stream = Generator(0, size123))
         } else htdocs?.also {
             val file = File(htdocs, path)
             println("Requested file: "+file.absolutePath)
