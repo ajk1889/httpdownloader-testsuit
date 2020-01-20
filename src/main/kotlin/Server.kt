@@ -55,7 +55,7 @@ class Server(
             return@withContext toInputStream("No file specified", 502)
         } else if (headers["path"] == path123) {
             return@withContext toInputStream(stream = Generator(0, size))
-        } else {
+        } else htdocs?.also {
             val file = File(htdocs, path)
             println("Requested file: "+file.absolutePath)
             if(file.exists()) return@withContext toInputStream(file)
