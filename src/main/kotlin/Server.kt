@@ -49,17 +49,39 @@ class Server(
         }
     }
 
+    private fun Map<String, String>.getContentRange(): Pair<Long, Long>? {
+        val range = get("Range") ?: return null
+        if (!range.startsWith("bytes=")) return null
+        var start = 0L
+        try {
+            start = range.substring(6, range.indexOf('-')).toLong()
+        } catch (ignored: Exception) {
+        }
+        var end = -1L
+        try {
+            end = range.substring(range.indexOf('-') + 1).toLong()
+        } catch (ignored: Exception) {
+        }
+        return start to end
+    }
+
     private suspend fun generateResponse(headers: Map<String, String>): InputStream = withContext(Dispatchers.Default) {
         val path = headers["path"]
-        if (headers.isEmpty() || path==null) {
+        if (headers.isEmpty() || path == null) {
             return@withContext toInputStream("No file specified", 502)
         } else if (headers["path"] == path123) {
             println("Requested 123 file; size = $size123")
-            return@withContext toInputStream(stream = Generator(0, size123))
+            return@withContext toInputStream(
+                Generator(0, size123),
+                headers.getContentRange()
+            )
         } else htdocs?.also {
             val file = File(htdocs, path)
-            println("Requested file: "+file.absolutePath)
-            if(file.exists()) return@withContext toInputStream(file)
+            println("Requested file: " + file.absolutePath)
+            if (file.exists()) return@withContext toInputStream(
+                file,
+                headers.getContentRange()
+            )
         }
         return@withContext toInputStream("File not found", 404)
     }
@@ -86,19 +108,17 @@ class Server(
 
     private suspend fun Socket.readInput(): String = withContext(Dispatchers.IO) {
         try {
-            this@readInput.use { socket ->
-                val ip = socket.getInputStream()
-                val data = StringBuilder()
-                val bfr = ByteArray(1024)
-                var n = ip.read(bfr)
-                while (n > 0) {
-                    data.append(String(bfr, 0, n))
-                    if (data.endsWith("\r\n\r\n"))
-                        break
-                    n = ip.read(bfr)
-                }
-                data.toString()
+            val ip = getInputStream()
+            val data = StringBuilder()
+            val bfr = ByteArray(1024)
+            var n = ip.read(bfr)
+            while (n > 0) {
+                data.append(String(bfr, 0, n))
+                if (data.endsWith("\r\n\r\n"))
+                    break
+                n = ip.read(bfr)
             }
+            data.toString()
         } catch (e: IOException) {
             e.printStackTrace()
             ""
@@ -143,9 +163,15 @@ class Server(
         if (contentRange != null) {
             val (offset, limit) = contentRange
             inputStream.skip(offset)
-            inputStream = inputStream.toLimitedStream(limit + 1)
-            builder.append("Content-Length: ${limit - offset + 1}\r\n")
-            builder.append("Content-Range: bytes $offset-$limit/${file.length()}\r\n")
+            if (limit > 0) {
+                inputStream = inputStream.toLimitedStream(limit + 1)
+                builder.append("Content-Length: ${limit - offset + 1}\r\n")
+                builder.append("Content-Range: bytes $offset-$limit/${file.length()}\r\n")
+            } else {
+                val len = file.length()
+                builder.append("Content-Length: ${len - offset}\r\n")
+                builder.append("Content-Range: bytes $offset-${len - 1}/$len\r\n")
+            }
         } else builder.append("Content-Length: ${file.length()}\r\n")
 
         builder.append("\r\n")
@@ -154,29 +180,25 @@ class Server(
 
     private fun toInputStream(
         stream: Generator,
-        responseCode: Int = 200,
-        contentDisposition: String = "attachment; filename=\"a.txt\"",
-        contentLength: Long = -1,
-        contentRange: Triple<Long, Long, Long>? = null,
-        contentType: String = "text/html"
+        contentRange: Pair<Long, Long>? = null
     ): InputStream {
-        val builder = StringBuilder("HTTP/1.1 $responseCode ${errorCodes[responseCode]}\r\n")
+        val builder = StringBuilder("HTTP/1.1 200 OK\r\n")
         builder.append("Server: TestSuit\r\n")
-        builder.append("Content-Type: $contentType\r\n")
+        builder.append("Content-Type: application/octet-stream\r\n")
         builder.append("Connection: keep-alive\r\n")
         builder.append("Accept-Ranges: bytes\r\n")
-        builder.append("Content-Disposition: $contentDisposition\r\n")
+        builder.append("Content-Disposition: attachment; filename=\"a.txt\"\r\n")
 
         cookies?.also { builder.append("Set-Cookie: $it") }
 
-        val length = if (contentLength == -1L) stream.length else contentLength
-        builder.append("Content-Length: $length\r\n")
-
         if (contentRange != null) {
-            val (offset, limit, total) = contentRange
-            builder.append("Content-Range: bytes $offset-$limit/$total\r\n")
+            var (offset, limit) = contentRange
+            stream.offset = offset
+            if (limit < 0L) limit = stream.limit - 1
+            stream.limit = limit + 1
+            builder.append("Content-Range: bytes $offset-$limit/$size123\r\n")
         }
-
+        builder.append("Content-Length: ${stream.length}\r\n")
         builder.append("\r\n")
         return builder.toString().byteInputStream() + stream
     }

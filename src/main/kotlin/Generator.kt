@@ -3,8 +3,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 class Generator(
-    val offset: Long = 0,
-    val limit: Long = Long.MAX_VALUE
+    var offset: Long = 0,
+    var limit: Long = Long.MAX_VALUE
 ) : InputStream() {
     companion object {
         private fun Long.pow(power: Int): Long {
@@ -80,7 +80,7 @@ class Generator(
         }
     }
 
-    var seek = offset
+    private var seek = offset
     override fun read(): Int {
         if (seek >= limit) return -1
         return Generator[seek++].toInt()
