@@ -4,20 +4,12 @@ import kotlin.math.min
 operator fun InputStream.plus(second: InputStream): InputStream {
     val first = this
     return object : InputStream() {
-        var bytesRead = 0L
         var current = first
-        override fun read(): Int {
-            bytesRead += 1
-            val r = current.read()
-            return if(r<0 && current==first) {
-                current = second
-                current.read()
-            } else r
-        }
-
+        override fun read() = throw RuntimeException("read() should not be used")
         override fun read(b: ByteArray, off: Int, len: Int): Int {
+            if (Server.sleep > 0L) Thread.sleep(Server.sleep)
             val r = current.read(b, off, len)
-            return if(r<0 && current==first){
+            return if (r < 0 && current == first) {
                 current = second
                 current.read(b, off, len)
             } else r
@@ -28,22 +20,21 @@ operator fun InputStream.plus(second: InputStream): InputStream {
 /**
  * @return an inputStream that terminates when it reaches supplied limit (exclusive)
  */
-fun InputStream.setLimit(limit: Long): InputStream{
+fun InputStream.toLimitedStream(limit: Long): InputStream {
     val old = this
-    var position = 0L
-    return object : InputStream(){
-        override fun read(): Int {
-            if(position >= limit) return -1
-            position+=1
-            return old.read()
+    return object : InputStream() {
+        var bytesRead = 0L
+        override fun read() = throw RuntimeException("read() should not be used")
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            if (Server.sleep > 0L) Thread.sleep(Server.sleep)
+            if (bytesRead >= limit) return -1
+            val length = min(len.toLong(), limit - bytesRead).toInt()
+            return old.read(b, off, length).also { bytesRead += it }
         }
 
-        override fun read(b: ByteArray, off: Int, len: Int): Int {
-            if(position >= limit) return -1
-            val length = min(len.toLong(), limit - position).toInt()
-            position += length
-            println("off: $off len: $length b.length: ${b.size}")
-            return old.read(b, off, length)
+        override fun skip(n: Long): Long {
+            val length = min(n, limit - bytesRead)
+            return super.skip(length).also { bytesRead += it }
         }
     }
 }

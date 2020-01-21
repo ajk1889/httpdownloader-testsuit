@@ -1,18 +1,23 @@
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.FileInputStream
+import java.io.IOException
 import java.io.InputStream
 import java.net.ServerSocket
 import java.net.Socket
-import java.net.SocketTimeoutException
 
 class Server(
     private val port: Int = 1234
 ) {
-    var path123: String = "/a.txt"
-    var htdocs: File? = null
-    var cookies: String? = null
-    var size123: Long = 100 * 1024 * 1024
+    companion object {
+        var path123: String = "/a.txt"
+        var htdocs: File? = null
+        var cookies: String? = null
+        var size123: Long = 100 * 1024 * 1024
+        var ping: Long = 0L
+        var sleep: Long = 0L
+        var bufferSize: Int = 8 * 1024
+    }
 
     private val server: ServerSocket by lazy { ServerSocket(port) }
     private val ioScope = CoroutineScope(Dispatchers.IO)
@@ -37,6 +42,7 @@ class Server(
             val inputData = client.readInput()
             val request = inputData.extractHeaders()
             val response = generateResponse(request)
+            if (ping > 0) delay(ping)
             client.sendResponse(response)
             client.closeConnection()
             println("IO completed for $client")
@@ -80,26 +86,33 @@ class Server(
 
     private suspend fun Socket.readInput(): String = withContext(Dispatchers.IO) {
         try {
-            val ip = getInputStream()
-            val data = StringBuilder()
-            val bfr = ByteArray(1024)
-            var n = ip.read(bfr)
-            while (n > 0) {
-                data.append(String(bfr, 0, n))
-                if (data.endsWith("\r\n\r\n"))
-                    break
-                n = ip.read(bfr)
+            this@readInput.use { socket ->
+                val ip = socket.getInputStream()
+                val data = StringBuilder()
+                val bfr = ByteArray(1024)
+                var n = ip.read(bfr)
+                while (n > 0) {
+                    data.append(String(bfr, 0, n))
+                    if (data.endsWith("\r\n\r\n"))
+                        break
+                    n = ip.read(bfr)
+                }
+                data.toString()
             }
-            data.toString()
-        } catch (e: SocketTimeoutException) {
+        } catch (e: IOException) {
+            e.printStackTrace()
             ""
         }
     }
 
     private suspend fun Socket.sendResponse(response: InputStream) = withContext(Dispatchers.IO) {
-        val op = getOutputStream()
-        response.copyTo(op)
-        op.close()
+        try {
+            this@sendResponse.use {
+                response.copyTo(it.getOutputStream(), bufferSize)
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
     }
 
     private fun toInputStream(content: String, responseCode: Int): InputStream {
@@ -130,7 +143,7 @@ class Server(
         if (contentRange != null) {
             val (offset, limit) = contentRange
             inputStream.skip(offset)
-            inputStream = inputStream.setLimit(limit+1)
+            inputStream = inputStream.toLimitedStream(limit + 1)
             builder.append("Content-Length: ${limit - offset + 1}\r\n")
             builder.append("Content-Range: bytes $offset-$limit/${file.length()}\r\n")
         } else builder.append("Content-Length: ${file.length()}\r\n")
