@@ -1,6 +1,8 @@
 # httpdownloader-testsuit
 A test server for HTTP Downloader
 
+Download link = https://github.com/ajk1889/httpdownloader-testsuit/releases/
+
 ## Usage
 1. Start server using `java -jar TestSuit.jar`
 2. Type one of the available commands and press Enter to tweek Server parameters
