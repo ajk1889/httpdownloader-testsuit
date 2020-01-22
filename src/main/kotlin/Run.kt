@@ -9,7 +9,7 @@ fun main(args: Array<String>) {
     if (index != -1) Server.htdocs = File(args[index + 1])
     index = args.indexOf("-path123")
     if (index != -1) Server.path123 = args[index + 1]
-    index = args.indexOf("-cookies")
+    index = args.indexOf("-cookie")
     if (index != -1) Server.cookies = args[index + 1]
     index = args.indexOf("-size123")
     if (index != -1) Server.size123 = args[index + 1].toLong()
@@ -28,7 +28,12 @@ fun processInputs(server: Server){
         when {
             cmd == null -> continue@loop
             cmd == "stop" -> break@loop
-            cmd.startsWith("cookie=") -> { }
+            cmd.startsWith("cookie=") -> {
+                val cookie = cmd.substring("cookie=".length)
+                if (cookie.isBlank()) Server.cookies = null
+                else Server.cookies = cookie
+                println("Cookie changed to ${Server.cookies}")
+            }
             cmd.startsWith("path123=") -> {
                 Server.path123 = cmd.substring("path123=".length)
                 println("path123 changed to ${Server.path123}")
