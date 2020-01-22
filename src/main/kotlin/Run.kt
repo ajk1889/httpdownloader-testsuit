@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
 fun processInputs(server: Server){
     var cmd: String?
     loop@ while (true) {
-        cmd = readLine()
+        cmd = readLine()?.trim()
         when {
             cmd == null -> continue@loop
             cmd == "stop" -> break@loop
@@ -62,7 +62,7 @@ fun processInputs(server: Server){
             }
             else -> println(
                 "Invalid command\n" +
-                        "Available commands: cookie, path123, size123, htdocs, ping, sleep, bfrsize\n" +
+                        "Available commands: cookie, path123, size123, htdocs, ping, sleep, bfrsize, stop\n" +
                         "Usage: `command=value`"
             )
         }
