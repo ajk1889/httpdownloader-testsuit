@@ -95,7 +95,7 @@ class Server(
                 )
             }
         }
-        return@withContext toInputStream("<h2>File not found</h2>", 404)
+        return@withContext toInputStream("<h2>Can't access the file</h2>", 404)
     }
 
     private suspend fun String.extractHeaders(): Map<String, String> = withContext(Dispatchers.Default) {
@@ -118,21 +118,30 @@ class Server(
         close()
     }
 
-    private suspend fun Socket.readInput(): String = withContext(Dispatchers.IO) {
+    private suspend fun Socket.readInput(
+        alreadyRead: String = "",
+        retryCount: Int = 2
+    ): String = withContext(Dispatchers.IO) {
         try {
             val ip = getInputStream()
-            val data = StringBuilder()
+            val data = StringBuilder(alreadyRead)
             val bfr = ByteArray(1024)
-            var n = ip.read(bfr)
-            while (n > 0) {
-                data.append(String(bfr, 0, n))
-                if (data.endsWith("\r\n\r\n"))
-                    break
-                n = ip.read(bfr)
+            try {
+                var n = ip.read(bfr)
+                while (n > 0) {
+                    data.append(String(bfr, 0, n))
+                    if (data.endsWith("\r\n\r\n"))
+                        break
+                    n = ip.read(bfr)
+                }
+            } catch (e: IOException) {
+                if (retryCount > 0) {
+                    println("$e Retrying read")
+                    return@withContext readInput(data.toString(), retryCount - 1)
+                }
             }
             data.toString()
         } catch (e: IOException) {
-            println(e)
             ""
         }
     }
@@ -189,7 +198,7 @@ class Server(
             builder.append("\r\n")
             return builder.toString().byteInputStream() + inputStream
         } catch (e: FileNotFoundException) {
-            return toInputStream("<h2>File not found</h2>", 404)
+            return toInputStream("<h2>File not found exception</h2>", 404)
         }
     }
 
