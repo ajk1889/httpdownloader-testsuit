@@ -73,12 +73,12 @@ class Server(
 
     private suspend fun generateResponse(headers: Map<String, String>): InputStream = withContext(Dispatchers.Default) {
         if (headers.isEmpty())
-            return@withContext toInputStream("Invalid request", 500)
+            return@withContext toInputStream("<h2>Invalid request</h2>", 500)
         if (!areCookiesValid(headers))
-            return@withContext toInputStream("Invalid cookies", 403)
+            return@withContext toInputStream("<h2>Invalid cookies</h2>", 403)
 
         when (val path = headers["path"]) {
-            null -> return@withContext toInputStream("No file specified", 500)
+            null -> return@withContext toInputStream("<h2>No file specified</h2>", 500)
             path123 -> {
                 println("Requested 123 file; size = $size123")
                 return@withContext toInputStream(
@@ -95,7 +95,7 @@ class Server(
                 )
             }
         }
-        return@withContext toInputStream("File not found", 404)
+        return@withContext toInputStream("<h2>File not found</h2>", 404)
     }
 
     private suspend fun String.extractHeaders(): Map<String, String> = withContext(Dispatchers.Default) {
@@ -161,6 +161,7 @@ class Server(
         file: File,
         contentRange: Pair<Long, Long>? = null
     ): InputStream {
+        if (file.isDirectory) return folderListStream(file)
         try {
             var inputStream: InputStream = FileInputStream(file)
             val builder = StringBuilder("HTTP/1.1 200 OK\r\n")
@@ -188,8 +189,33 @@ class Server(
             builder.append("\r\n")
             return builder.toString().byteInputStream() + inputStream
         } catch (e: FileNotFoundException) {
-            return toInputStream("File not found", 404)
+            return toInputStream("<h2>File not found</h2>", 404)
         }
+    }
+
+    private fun folderListStream(file: File): InputStream {
+        val files = file.listFiles()
+            ?: return toInputStream("<h2>Folder not accessible</h2>", 500)
+        if (files.isEmpty())
+            return toInputStream("<h2>Empty folder</h2>", 200)
+        val builder = StringBuilder()
+        val subLen = htdocs?.canonicalPath?.length ?: 0
+        for (f in files) {
+            builder.append("<a href='")
+                .append(f.canonicalPath.substring(subLen))
+                .append("'>")
+            if (f.isDirectory) builder.append("<font color='red' size=4>")
+            else builder.append("<font color='black'>")
+            builder.append(f.name).append("</font></a><br/>")
+        }
+        return toInputStream(
+            """
+            |<html>
+            |<title>${file.name}</title>
+            |<body>$builder</body>
+            |</html>
+        """.trimMargin(), 200
+        )
     }
 
     private fun toInputStream(
