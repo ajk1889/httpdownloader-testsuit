@@ -16,12 +16,12 @@ fun main(args: Array<String>) {
 
     server.start()
     println("Server started")
-    processInputs(server)
+    processInputs()
     server.stop()
     println("stopped")
 }
 
-fun processInputs(server: Server){
+fun processInputs() {
     var cmd: String?
     loop@ while (true) {
         cmd = readLine()?.trim()
