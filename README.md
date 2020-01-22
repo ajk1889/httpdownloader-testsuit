@@ -20,5 +20,5 @@ Number of milliseconds server should sleep between writing each buffer
 The number of bytes each buffer should hold
 #### cookie=[string]
 Server will respond with error 403 if cookie is not sent along with request. 
-The response will always contain Set-Cookie header if this is set.
+The response will always contain `Set-Cookie` header if this is set.
 Enter `cookie=` as input to disable cookie verification
