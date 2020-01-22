@@ -10,7 +10,7 @@ Download link = https://github.com/ajk1889/httpdownloader-testsuit/releases/
 
 ## Available commands
 #### htdocs=[/full/path/to/folder]
-If htdocs is set, any request to `localhost:1234` will display contents of that folder. Enter `htdocs=` as input to disable this.
+If htdocs is set, any request to `localhost:1234` will display contents of that folder. Enter `htdocs=` as input to disable this. On clicking an item, any file will be downloaded irrespective of their type (including HTML files) and any folder will display its contents. (red colour indicates folder & black is file)
 #### path123=[path/to/123/file]
 If path123 is set, any request to that file will download 123 file. Even if `htdocs` is set & such a file already exists in it. 
 By default `path123` is set to `/a.txt`. `path123` is mandatory & cannot be disabled. Change to different path if it conflicts with existing file
