@@ -4,6 +4,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import kotlin.math.min
 
 class Server(
     private val port: Int = 1234
@@ -244,8 +245,8 @@ class Server(
             var (offset, limit) = contentRange
             stream.offset = offset
             if (limit < 0L) limit = stream.limit - 1
-            stream.limit = limit + 1
-            builder.append("Content-Range: bytes $offset-$limit/$size123\r\n")
+            stream.limit = min(limit + 1, size123 - 1)
+            builder.append("Content-Range: bytes ${stream.offset}-${stream.limit}/$size123\r\n")
         }
         builder.append("Content-Length: ${stream.length}\r\n")
         builder.append("\r\n")
