@@ -10,6 +10,8 @@ class Server(
     private val port: Int = 1234
 ) {
     companion object {
+        var contentLengthMode = false
+        var noLengthMode = false
         var path123: String = "/a.txt"
         var htdocs: File? = null
         var cookies: String? = null
@@ -112,6 +114,7 @@ class Server(
             val value = items[i].substring(separatorIndex + 2)
             headers[key] = value
         }
+        if (contentLengthMode) headers.remove("Range")
         headers
     }
 
@@ -160,7 +163,8 @@ class Server(
         builder.append("Content-Type: text/html\r\n")
         builder.append("Connection: keep-alive\r\n")
         builder.append("Accept-Ranges: bytes\r\n")
-        builder.append("Content-Length: ${content.length}\r\n")
+        if (!noLengthMode)
+            builder.append("Content-Length: ${content.length}\r\n")
         cookies?.also { builder.append("Set-Cookie: $it\r\n") }
         builder.append("\r\n")
         builder.append(content)
@@ -182,7 +186,7 @@ class Server(
             builder.append("Content-Disposition: attachment; filename=\"${file.name}\"\r\n")
             cookies?.also { builder.append("Set-Cookie: $it\r\n") }
 
-            if (contentRange != null) {
+            if (contentRange != null && !noLengthMode && !contentLengthMode) {
                 val (offset, limit) = contentRange
                 inputStream.skip(offset)
                 if (limit > 0) {
@@ -194,7 +198,8 @@ class Server(
                     builder.append("Content-Length: ${len - offset}\r\n")
                     builder.append("Content-Range: bytes $offset-${len - 1}/$len\r\n")
                 }
-            } else builder.append("Content-Length: ${file.length()}\r\n")
+            } else if (!noLengthMode)
+                builder.append("Content-Length: ${file.length()}\r\n")
 
             builder.append("\r\n")
             return builder.toString().byteInputStream() + inputStream
@@ -248,7 +253,8 @@ class Server(
             stream.limit = min(limit + 1, size123 - 1)
             builder.append("Content-Range: bytes ${stream.offset}-${stream.limit}/$size123\r\n")
         }
-        builder.append("Content-Length: ${stream.length}\r\n")
+        if (!noLengthMode)
+            builder.append("Content-Length: ${stream.length}\r\n")
         builder.append("\r\n")
         return builder.toString().byteInputStream() + stream
     }

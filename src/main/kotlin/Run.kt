@@ -60,9 +60,25 @@ fun processInputs() {
                 Server.bufferSize = cmd.substring("bfrsize=".length).toInt()
                 println("bufferSize changed to ${Server.bufferSize}")
             }
+            cmd.startsWith("lengthonly=") -> {
+                Server.contentLengthMode = cmd.substring("lengthonly=".length).toBoolean()
+                if (Server.contentLengthMode) {
+                    Server.noLengthMode = false
+                    println("no-length mode changed to false")
+                }
+                println("length-only mode changed to ${Server.contentLengthMode}")
+            }
+            cmd.startsWith("nolength=") -> {
+                Server.noLengthMode = cmd.substring("nolength=".length).toBoolean()
+                if (Server.noLengthMode) {
+                    Server.contentLengthMode = false
+                    println("length-only mode changed to false")
+                }
+                println("no-length mode changed to ${Server.noLengthMode}")
+            }
             else -> println(
                 "Invalid command\n" +
-                        "Available commands: cookie, path123, size123, htdocs, ping, sleep, bfrsize, stop\n" +
+                        "Available commands: cookie, path123, size123, htdocs, ping, sleep, bfrsize, stop, lengthonly, nolength\n" +
                         "Usage: `command=value`"
             )
         }
