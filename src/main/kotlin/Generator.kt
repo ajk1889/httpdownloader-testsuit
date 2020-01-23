@@ -3,7 +3,6 @@ import kotlin.math.max
 import kotlin.math.min
 
 class Generator(
-    var offset: Long = 0,
     var limit: Long = Long.MAX_VALUE
 ) : InputStream() {
     companion object {
@@ -79,6 +78,12 @@ class Generator(
             }
         }
     }
+
+    var offset: Long = 0
+        set(value) {
+            seek = seek - field + value
+            field = value
+        }
 
     private var seek = offset
     override fun read(): Int {

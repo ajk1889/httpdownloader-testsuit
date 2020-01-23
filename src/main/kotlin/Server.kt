@@ -82,7 +82,7 @@ class Server(
             path123 -> {
                 println("Requested 123 file; size = $size123")
                 return@withContext toInputStream(
-                    Generator(0, size123),
+                    Generator(size123),
                     headers.getContentRange()
                 )
             }
