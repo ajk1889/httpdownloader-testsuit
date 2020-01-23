@@ -13,6 +13,16 @@ fun main(args: Array<String>) {
     if (index != -1) Server.cookies = args[index + 1]
     index = args.indexOf("-size123")
     if (index != -1) Server.size123 = args[index + 1].toLong()
+    index = args.indexOf("-ping")
+    if (index != -1) Server.ping = args[index + 1].toLong()
+    index = args.indexOf("-sleep")
+    if (index != -1) Server.sleep = args[index + 1].toLong()
+    index = args.indexOf("-bfrsize")
+    if (index != -1) Server.bufferSize = args[index + 1].toInt()
+    index = args.indexOf("-lengthonly")
+    if (index != -1) Server.contentLengthMode = args[index + 1].toBoolean()
+    index = args.indexOf("-nolength")
+    if (index != -1) Server.noLengthMode = args[index + 1].toBoolean()
 
     server.start()
     println("Server started")

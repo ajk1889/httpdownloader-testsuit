@@ -13,6 +13,9 @@ class Server(
         var contentLengthMode = false
         var noLengthMode = false
         var path123: String = "/a.txt"
+            set(value) {
+                field = if (value.first() != '/') "/$value" else value
+            }
         var htdocs: File? = null
         var cookies: String? = null
         var size123: Long = 100 * 1024 * 1024
@@ -242,7 +245,7 @@ class Server(
         builder.append("Content-Type: application/octet-stream\r\n")
         builder.append("Connection: keep-alive\r\n")
         builder.append("Accept-Ranges: bytes\r\n")
-        builder.append("Content-Disposition: attachment; filename=\"a.txt\"\r\n")
+        builder.append("Content-Disposition: attachment; filename=\"${File(path123).name}\"\r\n")
 
         cookies?.also { builder.append("Set-Cookie: $it\r\n") }
 
