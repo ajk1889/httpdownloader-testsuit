@@ -219,8 +219,10 @@ class Server(
         val builder = StringBuilder()
         val subLen = htdocs?.canonicalPath?.length ?: 0
         for (f in files) {
-            builder.append("<a href='/")
-                .append(f.canonicalPath.substring(subLen))
+            var relativePath = f.canonicalPath.substring(subLen)
+            if (!relativePath.startsWith('/')) relativePath = "/$relativePath"
+            builder.append("<a href='")
+                .append(relativePath)
                 .append("'>")
             if (f.isDirectory) builder.append("<font color='red' size=4>")
             else builder.append("<font color='black'>")
