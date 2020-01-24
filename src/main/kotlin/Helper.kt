@@ -38,3 +38,16 @@ fun InputStream.toLimitedStream(limit: Long): InputStream {
         }
     }
 }
+
+fun Long.formatted(): String {
+    if (this < 0) return "---"
+    var s = this.toDouble()
+    var i = 0
+    while (s > 999 && i < 4) {
+        s /= 1024L; i++
+    }
+    val value = if (i == 0) s.toInt().toString()
+    else "%.2f".format(s)
+    val unit = arrayOf("bytes", "KB", "MB", "GB", "TB")[i]
+    return "$value $unit"
+}

@@ -50,7 +50,7 @@ fun processInputs() {
             }
             cmd.startsWith("size123=") -> {
                 Server.size123 = cmd.substring("size123=".length).toLong()
-                println("size123 changed to ${Server.size123}")
+                println("size123 changed to ${Server.size123} bytes = " + Server.size123.formatted())
             }
             cmd.startsWith("htdocs=") -> {
                 val htdocs = cmd.substring("htdocs=".length)
@@ -68,7 +68,7 @@ fun processInputs() {
             }
             cmd.startsWith("bfrsize=") -> {
                 Server.bufferSize = cmd.substring("bfrsize=".length).toInt()
-                println("bufferSize changed to ${Server.bufferSize}")
+                println("bufferSize changed to ${Server.bufferSize} bytes = " + Server.bufferSize.toLong().formatted())
             }
             cmd.startsWith("lengthonly=") -> {
                 Server.contentLengthMode = cmd.substring("lengthonly=".length).toBoolean()

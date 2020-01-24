@@ -86,7 +86,7 @@ class Server(
         when (val path = headers["path"]) {
             null -> return@withContext toInputStream("<h2>No file specified</h2>", 500)
             path123 -> {
-                println("Requested 123 file; size = $size123")
+                println("Requested 123 file; size = ${size123.formatted()}")
                 return@withContext toInputStream(
                     Generator(size123),
                     headers.getContentRange()
@@ -94,7 +94,7 @@ class Server(
             }
             else -> htdocs?.also {
                 val file = File(htdocs, URLDecoder.decode(path, StandardCharsets.UTF_8))
-                println("Requested file: " + file.absolutePath + " length=" + file.length())
+                println("Requested file: " + file.absolutePath + " length=" + file.length().formatted())
                 if (file.exists()) return@withContext toInputStream(
                     file,
                     headers.getContentRange()
@@ -166,11 +166,11 @@ class Server(
         builder.append("Content-Type: text/html\r\n")
         builder.append("Connection: keep-alive\r\n")
         builder.append("Accept-Ranges: bytes\r\n")
-        if (!noLengthMode)
-            builder.append("Content-Length: ${content.length}\r\n")
+        val extra = testFileLink
+        builder.append("Content-Length: ${content.length + extra.length}\r\n")
         cookies?.also { builder.append("Set-Cookie: $it\r\n") }
         builder.append("\r\n")
-        builder.append(content)
+        builder.append(content).append(extra)
         return builder.toString().byteInputStream()
     }
 
@@ -264,24 +264,8 @@ class Server(
         return builder.toString().byteInputStream() + stream
     }
 
-    private val errorCodes = mapOf(
-        100 to "Continue", 101 to "Switching Protocols",
-        200 to "OK", 201 to "Created", 202 to "Accepted", 203 to "Non-Authoritative Information",
-        204 to "No Content", 205 to "Reset Content", 206 to "Partial Content", 300 to "Multiple Choices",
-        301 to "Moved Permanently", 302 to "Found", 303 to "See Other", 304 to "Not Modified",
-        305 to "Use Proxy", 307 to "Temporary Redirect", 400 to "Bad Request", 401 to "Unauthorized",
-        402 to "Payment Required", 403 to "Forbidden", 404 to "Not Found", 405 to "Method Not Allowed",
-        406 to "Not Acceptable", 407 to "Proxy Authentication Required", 408 to "Request Timeout",
-        409 to "Conflict", 410 to "Gone", 411 to "Length Required", 412 to "Precondition Failed",
-        413 to "Payload Too Large", 414 to "URI Too Long", 415 to "Unsupported Media Type",
-        416 to "Range Not Satisfiable", 417 to "Expectation Failed", 418 to "I'm a teapot",
-        426 to "Upgrade Required", 500 to "Internal Server Error", 501 to "Not Implemented",
-        502 to "Bad Gateway", 503 to "Service Unavailable", 504 to "Gateway Time-out",
-        505 to "HTTP Version Not Supported", 102 to "Processing", 207 to "Multi-Status",
-        226 to "IM Used", 308 to "Permanent Redirect", 422 to "Unprocessable Entity", 423 to "Locked",
-        424 to "Failed Dependency", 428 to "Precondition Required", 429 to "Too Many Requests",
-        431 to "Request Header Fields Too Large", 451 to "Unavailable For Legal Reasons",
-        506 to "Variant Also Negotiates", 507 to "Insufficient Storage",
-        511 to "Network Authentication Required"
-    )
+    private val errorCodes = mapOf(200 to "OK", 403 to "Forbidden", 404 to "Not Found", 500 to "Internal Server Error")
+
+    private val testFileLink: String
+        get() = "\n\n<br/><br/><a href='$path123'>Download a test file (${size123.formatted()})</a>"
 }
