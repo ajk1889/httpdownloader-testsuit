@@ -137,7 +137,10 @@ class Server(
                 var n = ip.read(bfr)
                 while (n > 0) {
                     data.append(String(bfr, 0, n))
-                    if (ip.readCompleted(data)) break
+                    if (data.contains("\r\n\r\n")) {
+                        data.removeRange(data.indexOf("\r\n\r\n"), data.length)
+                        break
+                    }
                     n = ip.read(bfr)
                 }
             } catch (e: IOException) {
