@@ -279,7 +279,7 @@ class Server(
             var (offset, limit) = contentRange
             stream.offset = offset
             if (limit < 0L) limit = stream.limit - 1
-            stream.limit = min(limit + 1, size123 - 1)
+            stream.limit = min(limit + 1, size123)
             builder.append("Content-Range: bytes ${stream.offset}-${stream.limit - 1}/$size123\r\n")
         }
         if (!noLengthMode)
