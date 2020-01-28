@@ -43,7 +43,7 @@ class Server(
     private fun serve(client: Socket) {
         ioScope.launch {
             println("New connection from $client")
-            client.soTimeout = 5000
+            client.soTimeout = 500
             val inputData = client.readInput()
             val request = inputData.extractHeaders()
             val response = generateResponse(request)
@@ -137,8 +137,10 @@ class Server(
                 var n = ip.read(bfr)
                 while (n > 0) {
                     data.append(String(bfr, 0, n))
-                    if (data.endsWith("\r\n\r\n"))
+                    if (data.contains("\r\n\r\n")) {
+                        data.removeRange(data.indexOf("\r\n\r\n"), data.length)
                         break
+                    }
                     n = ip.read(bfr)
                 }
             } catch (e: IOException) {
@@ -151,6 +153,28 @@ class Server(
         } catch (e: IOException) {
             ""
         }
+    }
+
+    private suspend fun InputStream.readCompleted(alreadyRead: StringBuilder): Boolean = withContext(Dispatchers.IO) {
+        val endIndex = alreadyRead.indexOf("\r\n\r\n")
+        if (endIndex == -1) return@withContext false
+        val contentLength = alreadyRead.split("Content-Length: ").let {
+            if (it.size == 1) return@withContext true
+            it[1].substring(0, it[1].indexOf('\r')).toLong()
+        }
+        val bytesRemaining = contentLength - (alreadyRead.length - (endIndex + 4))
+        if (bytesRemaining == 0L) return@withContext true
+
+        val bfr = ByteArray(1024)
+        var n = read(bfr)
+        var bytesRead = n.toLong()
+        while (n > 0) {
+            alreadyRead.append(String(bfr, 0, n))
+            if (bytesRead == bytesRemaining) break
+            n = read(bfr)
+            bytesRead += n
+        }
+        true
     }
 
     private suspend fun Socket.sendResponse(response: InputStream) = withContext(Dispatchers.IO) {
