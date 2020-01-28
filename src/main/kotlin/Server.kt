@@ -256,7 +256,7 @@ class Server(
             stream.offset = offset
             if (limit < 0L) limit = stream.limit - 1
             stream.limit = min(limit + 1, size123 - 1)
-            builder.append("Content-Range: bytes ${stream.offset}-${stream.limit}/$size123\r\n")
+            builder.append("Content-Range: bytes ${stream.offset}-${stream.limit - 1}/$size123\r\n")
         }
         if (!noLengthMode)
             builder.append("Content-Length: ${stream.length}\r\n")
