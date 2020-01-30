@@ -10,6 +10,7 @@ class Server(
     private val port: Int = 1234
 ) {
     companion object {
+        var loggingAllowed = true
         var contentLengthMode = false
         var noLengthMode = false
         var path123: String = "/a.txt"
@@ -42,15 +43,15 @@ class Server(
 
     private fun serve(client: Socket) {
         ioScope.launch {
-            println("New connection from $client")
-            client.soTimeout = 500
+            if (loggingAllowed) println("New connection from $client")
+            client.soTimeout = 1000
             val inputData = client.readInput()
             val request = inputData.extractHeaders()
             val response = generateResponse(request)
             if (ping > 0) delay(ping)
             client.sendResponse(response)
             client.closeConnection()
-            println("IO completed for $client")
+            if (loggingAllowed) println("IO completed for $client")
         }
     }
 
@@ -86,7 +87,8 @@ class Server(
         when (val path = headers["path"]) {
             null -> return@withContext toInputStream("<h2>No file specified</h2>", 500)
             path123 -> {
-                println("Requested 123 file; size = ${size123.formatted()}")
+                if (loggingAllowed)
+                    println("Requested 123 file; size = ${size123.formatted()}")
                 return@withContext toInputStream(
                     Generator(size123),
                     headers.getContentRange()
@@ -94,7 +96,8 @@ class Server(
             }
             else -> htdocs?.also {
                 val file = File(htdocs, URLDecoder.decode(path, StandardCharsets.UTF_8))
-                println("Requested file: " + file.absolutePath + " length=" + file.length().formatted())
+                if (loggingAllowed)
+                    println("Requested file: " + file.absolutePath + " length=" + file.length().formatted())
                 if (file.exists()) return@withContext toInputStream(
                     file,
                     headers.getContentRange()
@@ -145,7 +148,7 @@ class Server(
                 }
             } catch (e: IOException) {
                 if (retryCount > 0) {
-                    println("$e Retrying read")
+                    if (loggingAllowed) println("$e Retrying read")
                     return@withContext readInput(data.toString(), retryCount - 1)
                 }
             }
@@ -155,6 +158,11 @@ class Server(
         }
     }
 
+    /**
+     * Returns whether the data from a socket is completely read.
+     * If content-length is specified in HTTP-Headers, this method continue to read until end of length & returns true.
+     * If Content-Length is not specified, this method returns true if the HTTP-Headers are fully read
+     */
     private suspend fun InputStream.readCompleted(alreadyRead: StringBuilder): Boolean = withContext(Dispatchers.IO) {
         val endIndex = alreadyRead.indexOf("\r\n\r\n")
         if (endIndex == -1) return@withContext false
@@ -181,7 +189,8 @@ class Server(
         try {
             this@sendResponse.use { response.copyTo(it.getOutputStream(), bufferSize) }
         } catch (e: IOException) {
-            println(e)
+            if (loggingAllowed) println(e)
+            ""
         }
     }
 

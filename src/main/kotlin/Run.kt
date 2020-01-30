@@ -23,6 +23,8 @@ fun main(args: Array<String>) {
     if (index != -1) Server.contentLengthMode = args[index + 1].toBoolean()
     index = args.indexOf("-nolength")
     if (index != -1) Server.noLengthMode = args[index + 1].toBoolean()
+    index = args.indexOf("-logging")
+    if (index != -1) Server.loggingAllowed = args[index + 1].toBoolean()
 
     server.start()
     println("Server started")
@@ -86,9 +88,14 @@ fun processInputs() {
                 }
                 println("no-length mode changed to ${Server.noLengthMode}")
             }
+            cmd.startsWith("logging=") -> {
+                Server.loggingAllowed = cmd.substring("logging=".length).toBoolean()
+                println("loggingAllowed changed to ${Server.loggingAllowed}")
+            }
             else -> println(
                 "Invalid command\n" +
-                        "Available commands: cookie, path123, size123, htdocs, ping, sleep, bfrsize, stop, lengthonly, nolength\n" +
+                        "Available commands: cookie, path123, size123, htdocs, ping, " +
+                        "sleep, bfrsize, stop, lengthonly, nolength, logging\n" +
                         "Usage: `command=value`"
             )
         }
