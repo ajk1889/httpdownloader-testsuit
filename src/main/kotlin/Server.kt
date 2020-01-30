@@ -80,7 +80,7 @@ class Server(
 
     private suspend fun generateResponse(headers: Map<String, String>): InputStream = withContext(Dispatchers.Default) {
         if (headers.isEmpty())
-            return@withContext toInputStream("<h2>Invalid request</h2>", 500)
+            return@withContext ByteArrayInputStream(ByteArray(0))
         if (!areCookiesValid(headers))
             return@withContext toInputStream("<h2>Invalid cookies</h2>", 403)
 
