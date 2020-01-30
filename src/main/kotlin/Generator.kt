@@ -58,17 +58,16 @@ class Generator(
                 end -> ""
                 0L -> {
                     val totalSpaces = spacesBehind(end).first + 1
-                    val lst = List(totalSpaces.toInt() + 1) { it.toLong() }
-                    val str = lst.joinToString(" ")
-                    if (str.length < end) "$str "
+                    val str = buildString(0, totalSpaces + 1)
+                    if (str.length < end) str.append(' ').toString()
                     else str.substring(0, end.toInt())
                 }
                 else -> {
                     var (startSpaces, startExtraChars) = spacesBehind(start)
                     startSpaces += 1
                     val endSpaces = spacesBehind(end).first + 1
-                    val lst = List((endSpaces - startSpaces).toInt() + 1) { startSpaces + it }
-                    val str = (" " + lst.joinToString(" ")).substring(startExtraChars)
+                    val str = buildString(startSpaces, endSpaces + 1).insert(0, ' ')
+                        .substring(startExtraChars)
                     when {
                         str.length == (end - start).toInt() -> str
                         str.length < end - start -> "$str "
@@ -76,6 +75,17 @@ class Generator(
                     }
                 }
             }
+        }
+
+        private fun buildString(start: Long, end: Long): StringBuilder {
+            var i = start
+            val builder = StringBuilder()
+            while (i < end) {
+                builder.append(i).append(" ")
+                i += 1
+            }
+            builder.removeSuffix(" ")
+            return builder
         }
     }
 
