@@ -31,3 +31,5 @@ Enter `cookie=` as input to disable cookie verification. Ongoing downloads **won
 Server will not return file size (Content-Length and Content-Range) along with the response. Ongoing downloads **won't** be affected if you change this value
 #### lengthonly=[boolean]
 Server will not accept Content-Range requests. File will always be returned from beginning. Ongoing downloads **won't** be affected if you change this value
+#### logging=[boolean]
+Server will stop verbose logging. Useful when multiple concurrent connections are being made & you have to tweek parameters frequently.
