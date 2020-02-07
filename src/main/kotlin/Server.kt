@@ -111,13 +111,16 @@ class Server(
                 )
             }
             else -> htdocs?.also {
-                val file = File(htdocs, URLDecoder.decode(path, StandardCharsets.UTF_8))
-                if (loggingAllowed)
-                    println("Requested file: " + file.absolutePath + " length=" + file.length().formatted())
-                if (file.exists()) return@withContext toInputStream(
-                    file,
-                    headers.getContentRange()
-                )
+                if (it.exists() && it.isFile) {
+                    if (loggingAllowed)
+                        println("Requested file: " + it.absolutePath + " length=" + it.length().formatted())
+                    return@withContext toInputStream(it, headers.getContentRange())
+                } else {
+                    val file = File(htdocs, URLDecoder.decode(path, StandardCharsets.UTF_8))
+                    if (loggingAllowed)
+                        println("Requested file: " + file.absolutePath + " length=" + file.length().formatted())
+                    if (file.exists()) return@withContext toInputStream(file, headers.getContentRange())
+                }
             }
         }
         return@withContext toInputStream("<h2>Can't access the file</h2>", 404)
