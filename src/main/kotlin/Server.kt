@@ -10,7 +10,7 @@ class Server(
     private val port: Int = 1234
 ) {
     companion object {
-        var loggingAllowed = true
+        var loggingAllowed = false
         var contentLengthMode = false
         var noLengthMode = false
         var path123: String = "/a.txt"
@@ -245,10 +245,24 @@ class Server(
             var inputStream: InputStream = FileInputStream(file)
             val builder = StringBuilder("HTTP/1.1 200 OK\r\n")
             builder.append("Server: TestSuit\r\n")
-            builder.append("Content-Type: application/octet-stream\r\n")
+            when {
+                file.name.endsWithAny(".html", ".htm") -> {
+                    builder.append("Content-Type: text/html\r\n")
+                }
+                file.name.endsWithAny(
+                    ".java", ".txt",
+                    ".kt", ".py", ".php", ".json", ".js", ".css", ".sh", ".bat",
+                    ".pyw", ".md", ".ini", ".cfg"
+                ) -> {
+                    builder.append("Content-Type: text/plain\r\n")
+                }
+                else -> {
+                    builder.append("Content-Type: application/octet-stream\r\n")
+                    builder.append("Content-Disposition: attachment; filename=\"${file.name}\"\r\n")
+                }
+            }
             builder.append("Connection: keep-alive\r\n")
             builder.append("Accept-Ranges: bytes\r\n")
-            builder.append("Content-Disposition: attachment; filename=\"${file.name}\"\r\n")
             cookies?.also { builder.append("Set-Cookie: $it\r\n") }
 
             if (contentRange != null && !noLengthMode && !contentLengthMode) {
@@ -330,4 +344,9 @@ class Server(
 
     private val testFileLink: String
         get() = "\n\n<br/><br/><a href='$path123'>Download a test file (${size123.formatted()})</a>"
+
+    private fun String.endsWithAny(vararg suffixes: String): Boolean {
+        for (s in suffixes) if (this.endsWith(s)) return true
+        return false
+    }
 }
