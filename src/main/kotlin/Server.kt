@@ -236,11 +236,11 @@ class Server(
         return builder.toString().byteInputStream()
     }
 
-    private fun toInputStream(
+    private suspend fun toInputStream(
         file: File,
         contentRange: Pair<Long, Long>? = null
-    ): InputStream {
-        if (file.isDirectory) return folderListStream(file)
+    ): InputStream = withContext(Dispatchers.IO) {
+        if (file.isDirectory) return@withContext folderListStream(file)
         try {
             var inputStream: InputStream = FileInputStream(file)
             val builder = StringBuilder("HTTP/1.1 200 OK\r\n")
@@ -267,17 +267,17 @@ class Server(
                 builder.append("Content-Length: ${file.length()}\r\n")
 
             builder.append("\r\n")
-            return builder.toString().byteInputStream() + inputStream
+            return@withContext builder.toString().byteInputStream() + inputStream
         } catch (e: FileNotFoundException) {
-            return toInputStream("<h2>File not found exception</h2>", 404)
+            return@withContext toInputStream("<h2>File not found exception</h2>", 404)
         }
     }
 
-    private fun folderListStream(file: File): InputStream {
+    private suspend fun folderListStream(file: File): InputStream = withContext(Dispatchers.IO) {
         val files = file.listFiles()
-            ?: return toInputStream("<h2>Folder not accessible</h2>", 500)
+            ?: return@withContext toInputStream("<h2>Folder not accessible</h2>", 500)
         if (files.isEmpty())
-            return toInputStream("<h2>Empty folder</h2>", 200)
+            return@withContext toInputStream("<h2>Empty folder</h2>", 200)
         val builder = StringBuilder()
         val subLen = htdocs?.canonicalPath?.length ?: 0
         for (f in files) {
@@ -290,7 +290,7 @@ class Server(
             else builder.append("<font color='black'>")
             builder.append(f.name).append("</font></a><br/>")
         }
-        return toInputStream(
+        return@withContext toInputStream(
             """
             |<html>
             |<title>${file.name}</title>
