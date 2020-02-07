@@ -92,8 +92,10 @@ class Server(
         when (val path = headers["path"]) {
             null -> return@withContext toInputStream("<h2>No file specified</h2>", 500)
             "/textshare", "/textshare/" -> {
-                if (headers.containsKey("Content-Length"))
-                    println(client.readData(alreadyRead)["text"])
+                if (headers.containsKey("Content-Length")) {
+                    if (headers["Content-Type"]?.startsWith("multipart/form-data") != true)
+                        println(client.readPostData(alreadyRead)["text"])
+                }
                 return@withContext toInputStream(
                     """<form method=post>
                        |    <textarea name="text" style="width: 100%; height: 90%"></textarea>
@@ -178,7 +180,7 @@ class Server(
         }
     }
 
-    private suspend fun Socket.readData(alreadyRead: String): Map<String, String> = withContext(Dispatchers.IO) {
+    private suspend fun Socket.readPostData(alreadyRead: String): Map<String, String> = withContext(Dispatchers.IO) {
         val inputStream = getInputStream()
         val builder = StringBuilder(alreadyRead)
         inputStream.readCompleted(builder)
