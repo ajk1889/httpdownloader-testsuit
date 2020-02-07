@@ -47,7 +47,7 @@ class Server(
             client.soTimeout = 1000
             val inputData = client.readInput()
             val request = inputData.extractHeaders()
-            val response = generateResponse(request)
+            val response = generateResponse(request, inputData, client)
             if (ping > 0) delay(ping)
             client.sendResponse(response)
             client.closeConnection()
@@ -78,7 +78,11 @@ class Server(
                 || requestCookies != null && requestCookies.contains(acceptableCookies)
     }
 
-    private suspend fun generateResponse(headers: Map<String, String>): InputStream = withContext(Dispatchers.Default) {
+    private suspend fun generateResponse(
+        headers: Map<String, String>,
+        alreadyRead: String,
+        client: Socket
+    ): InputStream = withContext(Dispatchers.Default) {
         if (headers.isEmpty())
             return@withContext ByteArrayInputStream(ByteArray(0))
         if (!areCookiesValid(headers))
@@ -86,6 +90,18 @@ class Server(
 
         when (val path = headers["path"]) {
             null -> return@withContext toInputStream("<h2>No file specified</h2>", 500)
+            "/textshare", "/textshare/" -> {
+                if (headers.containsKey("Content-Length"))
+                    println(client.readData(alreadyRead)["text"])
+                return@withContext toInputStream(
+                    """<form method=post>
+                       |    <textarea name="text" style="width: 100%; height: 90%"></textarea>
+                       |    <br><br>
+                       |    <input type="submit">
+                       |<form/>""".trimMargin(),
+                    200
+                )
+            }
             path123 -> {
                 if (loggingAllowed)
                     println("Requested 123 file; size = ${size123.formatted()}")
@@ -155,6 +171,19 @@ class Server(
             data.toString()
         } catch (e: IOException) {
             ""
+        }
+    }
+
+    private suspend fun Socket.readData(alreadyRead: String): Map<String, String> = withContext(Dispatchers.IO) {
+        val inputStream = getInputStream()
+        val builder = StringBuilder(alreadyRead)
+        inputStream.readCompleted(builder)
+        with(builder.substring(builder.indexOf("\r\n\r\n") + 4)) {
+            val keyValue = split("=")
+            mutableMapOf<String, String>().also {
+                for (i in keyValue.indices step 2)
+                    it[keyValue[i]] = URLDecoder.decode(keyValue[i + 1], "utf8")
+            }
         }
     }
 
