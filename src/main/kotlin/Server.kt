@@ -4,6 +4,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import kotlin.math.min
 
 class Server(
@@ -303,8 +304,13 @@ class Server(
             builder.append("<a href='")
                 .append(relativePath)
                 .append("'>")
-            if (f.isDirectory) builder.append("<font color='red' size=4>")
-            else builder.append("<font color='black'>")
+            when {
+                Files.isSymbolicLink(f.toPath()) -> // avoid hyperlink (ignore html error; browser will tolerate)
+                    builder.append("</a><font color='orange'>")
+                f.isDirectory ->
+                    builder.append("<font color='red' size=4>")
+                else -> builder.append("<font color='black'>")
+            }
             builder.append(f.name).append("</font></a><br/>")
         }
         return@withContext toInputStream(
