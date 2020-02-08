@@ -93,7 +93,8 @@ class Server(
             null -> return@withContext toInputStream("<h2>No file specified</h2>", 500)
             "/textshare", "/textshare/" -> {
                 if (headers.containsKey("Content-Length"))
-                    println(client.readData(alreadyRead)["text"])
+                    if (headers["Content-Type"]?.contains("multipart/form-data") != true)
+                        println(client.readData(alreadyRead)["text"])
                 return@withContext toInputStream(
                     """<form method=post>
                        |    <textarea name="text" style="width: 100%; height: 90%"></textarea>
@@ -138,7 +139,8 @@ class Server(
             if (separatorIndex < 0) continue
             val key = items[i].substring(0, separatorIndex)
             val value = items[i].substring(separatorIndex + 2)
-            headers[key] = value
+            if (key in headers) headers[key] += "; $value"
+            else headers[key] = value
         }
         if (contentLengthMode) headers.remove("Range")
         headers
