@@ -91,7 +91,7 @@ class Server(
 
         when (val path = headers["path"]) {
             null -> return@withContext toInputStream("<h2>No file specified</h2>", 500)
-            "/textshare", "/textshare/" -> {
+            "/text", "/text/" -> {
                 if (headers.containsKey("Content-Length"))
                     if (headers["Content-Type"]?.contains("multipart/form-data") != true)
                         println(client.readData(alreadyRead)["text"])
@@ -99,6 +99,16 @@ class Server(
                     """<form method=post>
                        |    <textarea name="text" style="width: 100%; height: 90%"></textarea>
                        |    <br><br>
+                       |    <input type="submit">
+                       |<form/>""".trimMargin(),
+                    200
+                )
+            }
+            "/file", "/file/" -> {
+                return@withContext toInputStream(
+                    """<form action='/file' method="post" enctype="multipart/form-data">
+                       |    <input type="file" name="file">
+                       |    <br>
                        |    <input type="submit">
                        |<form/>""".trimMargin(),
                     200
