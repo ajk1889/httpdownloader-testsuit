@@ -3,7 +3,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.net.Socket
 
-class SocketInput(private val socket: Socket) {
+class Client(private val socket: Socket) {
     suspend fun getType(): RequestType = withContext(Dispatchers.IO) {
         TODO()
     }
@@ -16,7 +16,7 @@ class SocketInput(private val socket: Socket) {
         TODO()
     }
 
-    suspend fun getDataInput(): FileData {
+    suspend fun getDataInput(): FileData = withContext(Dispatchers.IO) {
         TODO()
     }
 
