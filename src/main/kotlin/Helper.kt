@@ -16,6 +16,10 @@ operator fun InputStream.plus(second: InputStream): InputStream {
         }
     }
 }
+typealias Headers = Map<String, List<String>>
+typealias FileData = Pair<String, InputStream>
+
+enum class RequestType { BLANK, POST, FILE }
 
 /**
  * @return an inputStream that terminates when it reaches supplied limit (exclusive)
