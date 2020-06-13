@@ -308,6 +308,10 @@ class Server(
             ?: return@withContext toInputStream("<h2>Folder not accessible</h2>", 500)
         if (files.isEmpty())
             return@withContext toInputStream("<h2>Empty folder</h2>", 200)
+        files.sortBy {
+            if (it.isDirectory) "....${it.name}"
+            else it.name.toLowerCase()
+        }
         val builder = StringBuilder()
         val subLen = htdocs?.canonicalPath?.length ?: 0
         for (f in files) {

@@ -55,10 +55,10 @@ fun processInputs() {
                 println("size123 changed to ${Server.size123} bytes = " + Server.size123.formatted())
             }
             cmd.startsWith("htdocs=") -> {
-                val htdocs = cmd.substring("htdocs=".length)
+                val htdocs = formatFilePath(cmd.substring("htdocs=".length))
                 if (htdocs.isBlank()) Server.htdocs = null
                 else Server.htdocs = File(htdocs)
-                println("htdocs changed to ${Server.htdocs}")
+                println("htdocs changed to |${Server.htdocs}|")
             }
             cmd.startsWith("ping=") -> {
                 Server.ping = cmd.substring("ping=".length).toLong()
@@ -100,4 +100,13 @@ fun processInputs() {
             )
         }
     }
+}
+
+fun formatFilePath(path: String): String {
+    var vPath = path
+    if (vPath[0] == '\'' || vPath[0] == '"')
+        vPath = vPath.substring(1)
+    if (vPath[vPath.lastIndex] == '\'' || vPath[vPath.lastIndex] == '"')
+        vPath = vPath.substring(0, vPath.lastIndex)
+    return vPath.trim()
 }
